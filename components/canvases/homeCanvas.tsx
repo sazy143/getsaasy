@@ -1,32 +1,70 @@
 import React, { useCallback, useEffect } from "react";
-let x = 0;
-function draw(ctx, width, height) {
-  ctx.clearRect(0, 0, width, height);
-  if (x > 200) x = 0;
-  ctx.beginPath();
-  ctx.strokeStyle = "blue";
-  ctx.moveTo(x, 0);
-  ctx.lineTo(x, 100);
-  ctx.stroke();
+import * as THREE from "three";
 
-  setTimeout(() => {
-    requestAnimationFrame(() => {
-      x++;
-      draw(ctx, width, height);
-    });
-  }, 1000 / 10);
-}
 export default function HomeCanvas() {
   const canvasRef = React.useRef(null);
-  const [width, setWidth] = React.useState(0);
-  const [height, setHeight] = React.useState(0);
+  let width = 0;
+  let height = 0;
+
+  let render = (camera, scene, renderer) => {
+    console.log("render", width, height);
+    camera.aspect = width / height;
+    camera.updateProjectionMatrix();
+    renderer.setSize(width, height);
+    renderer.render(scene, camera);
+  };
+
+  let setWH = (window) => {
+    width = window.innerWidth / 1.5;
+    height = window.innerHeight / 1.5;
+  };
 
   useEffect(() => {
-    setWidth(window.innerWidth);
-    setHeight(window.innerHeight);
+    //Set our constants
+    console.log("useEffect triggered");
+    setWH(window);
     const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d");
-    draw(ctx, width, height);
+
+    //set up ThreeJS essentials
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({
+      canvas: canvas,
+      antialias: true,
+    });
+    renderer.setPixelRatio(window.devicePixelRatio);
+    let loader = new THREE.TextureLoader();
+    renderer.setSize(width, height);
+
+    //load mesh
+    const texture = new THREE.TextureLoader().load("./globe.jpg");
+
+    //Set up our scene
+    const sphere = new THREE.Mesh(
+      new THREE.SphereGeometry(5, 50, 50),
+      new THREE.MeshBasicMaterial({
+        map: texture,
+      })
+    );
+    scene.add(sphere);
+
+    //set camera position
+    camera.position.z = 10;
+
+    //🤮
+    setTimeout(() => {
+      render(camera, scene, renderer);
+    }, 1000);
+
+    //handle resize
+    // window.addEventListener("resize", () => {
+    //   console.log("resize", window.innerWidth, window.innerHeight);
+    //   setWH(window);
+    //   render(camera, scene, renderer);
+    // });
+
+    //Initial render
+    render(camera, scene, renderer);
   }, [canvasRef.current]);
 
   return (
